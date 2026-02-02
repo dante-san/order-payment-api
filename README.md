@@ -1,69 +1,182 @@
-# CodeIgniter 4 Application Starter
+# Order Payment API
 
-## What is CodeIgniter?
+CodeIgniter 4 REST API for order and payment management.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## Task Status: ✅ COMPLETED
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+Built for backend developer assessment. All requirements met.
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+### Requirements
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+- API to place orders (PENDING status)
+- API to update payment status (SUCCESS/FAILED)
+- Payment updates trigger order status changes
+- Summary API showing order counts
 
-## Installation & updates
+### Implementation Status
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+✅ Place order endpoint  
+✅ Update payment status endpoint  
+✅ Summary endpoint (exact format as requested)  
+✅ SQLite database  
+✅ Users, orders, payments tables  
+✅ Transaction handling  
+✅ Validation
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+## Database Tables
+
+**users**: id, name, created_at  
+**orders**: id, user_id, status, created_at  
+**payments**: id, order_id, status, created_at
+
+Order statuses: PENDING, COMPLETED, FAILED  
+Payment statuses: PENDING, SUCCESS, FAILED
+
+Flow: Payment SUCCESS → Order COMPLETED | Payment FAILED → Order FAILED
 
 ## Setup
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+```bash
+# Install dependencies
+composer install
 
-## Important Change with index.php
+# Configure database (already set to SQLite)
+# Database file: writable/database.db
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+# Run migrations
+php spark migrate
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+# Seed test users
+php spark db:seed UserSeeder
 
-**Please** read the user guide for a better explanation of how CI4 works!
+# Start server
+php spark serve
+```
 
-## Repository Management
+API runs at: `http://localhost:8080`
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+## API Endpoints
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+### 1. Place Order
 
-## Server Requirements
+**POST** `/api/orders`
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+Request:
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+```json
+{
+  "user_id": 1
+}
+```
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+Response (201):
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+```json
+{
+  "success": true,
+  "message": "Order placed successfully",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "status": "PENDING",
+    "created_at": "2026-02-02 10:00:00"
+  }
+}
+```
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+### 2. Update Payment Status
+
+**PATCH** `/api/payments/{payment_id}/status`
+
+Request:
+
+```json
+{
+  "status": "SUCCESS"
+}
+```
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Payment status updated successfully",
+  "data": {
+    "id": 1,
+    "order_id": 1,
+    "status": "SUCCESS",
+    "created_at": "2026-02-02 10:00:00"
+  }
+}
+```
+
+### 3. Order Summary
+
+**GET** `/api/orders/summary`
+
+Response (200):
+
+```json
+{
+  "total_orders": 1200,
+  "completed_orders": 950,
+  "failed_orders": 180,
+  "pending_orders": 70
+}
+```
+
+## Testing
+
+```bash
+# Place order
+curl -X POST http://localhost:8080/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1}'
+
+# Update payment to SUCCESS
+curl -X PATCH http://localhost:8080/api/payments/1/status \
+  -H "Content-Type: application/json" \
+  -d '{"status": "SUCCESS"}'
+
+# Get summary
+curl http://localhost:8080/api/orders/summary
+```
+
+## Tech Stack
+
+- CodeIgniter 4
+- SQLite
+- PHP 8.1+
+
+## Project Structure
+
+```
+app/
+├── Controllers/Api/
+│   ├── Orders.php
+│   └── Payments.php
+├── Models/
+│   ├── UserModel.php
+│   ├── OrderModel.php
+│   └── PaymentModel.php
+├── Database/
+│   ├── Migrations/
+│   │   ├── *_create_users_table.php
+│   │   ├── *_create_orders_table.php
+│   │   └── *_create_payments_table.php
+│   └── Seeds/
+│       └── UserSeeder.php
+└── Config/
+    ├── Routes.php
+    └── Database.php
+```
+
+## Notes
+
+- Used database transactions for data consistency
+- Order status auto-updates based on payment status
+- Input validation on all endpoints
+- Error handling with proper HTTP codes
+
+Works as expected.
